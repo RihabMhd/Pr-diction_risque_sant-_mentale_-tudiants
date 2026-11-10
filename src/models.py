@@ -20,7 +20,7 @@ ORDINAL_COLS = {
 
 def train_models(X_train, X_test, y_train, y_test):
     """train 3 models on the same train set. Returns (fitted pipelines, JSON-serializable test metrics)"""
-    numeric, _, categorical = get_column_types(X_train)
+    numeric, categorical = get_column_types(X_train)
     ordinal = list(ORDINAL_COLS)
     nominal = [c for c in categorical if c not in ordinal]
 

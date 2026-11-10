@@ -19,14 +19,13 @@ def load_data(path=DATA_PATH):
 
 
 def get_column_types(df):
-    """return numeric columns, continuous columns, categorical columns."""
+    """return numeric columns, categorical columns"""
     numeric_cols = [
         c for c in df.select_dtypes(include="number").columns
         if c != "Student_ID"
     ]
-    continuous_cols = [c for c in numeric_cols if c != "Year_of_Study"]
     categorical_cols = [
         c for c in df.select_dtypes(include="object").columns
         if c not in ["Student_ID", TARGET]
     ]
-    return numeric_cols, continuous_cols, categorical_cols
+    return numeric_cols, categorical_cols

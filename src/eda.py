@@ -1,11 +1,11 @@
 from .data import TARGET, RISK_ORDER, EXPECTED_CATEGORIES
 
 
-def audit_data(df, continuous_cols):
+def audit_data(df, numeric_cols):
     """data-quality audit used by the Airflow DAG. Returns a JSON-serializable dict"""
     counts = df[TARGET].value_counts().reindex(RISK_ORDER, fill_value=0)
     outliers = {}
-    for col in continuous_cols:
+    for col in numeric_cols:
         q1, q3 = df[col].quantile([0.25, 0.75])
         iqr = q3 - q1
         outliers[col] = int(((df[col] < q1 - 1.5 * iqr) | (df[col] > q3 + 1.5 * iqr)).sum())
