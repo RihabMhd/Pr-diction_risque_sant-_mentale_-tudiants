@@ -1,0 +1,35 @@
+{
+  "shape": [
+    2000,
+    17
+  ],
+  "missing": {
+    "Sleep_Hours": 62,
+    "GPA": 38,
+    "Social_Media_Hours": 58,
+    "Financial_Stress": 91,
+    "Family_Support": 54,
+    "Attendance_Rate": 47,
+    "Diet_Quality": 69
+  },
+  "duplicates": 0,
+  "unexpected_categories": {},
+  "outliers_iqr": {
+    "Age": 4,
+    "Year_of_Study": 0,
+    "Sleep_Hours": 2,
+    "Study_Hours_Per_Week": 7,
+    "GPA": 9,
+    "Social_Media_Hours": 20,
+    "Screen_Time_Hours": 7,
+    "Financial_Stress": 0,
+    "Family_Support": 0,
+    "Attendance_Rate": 12
+  },
+  "class_counts": {
+    "Low": 660,
+    "Medium": 660,
+    "High": 680
+  },
+  "imbalance_ratio": 1.0303030303030303
+}
