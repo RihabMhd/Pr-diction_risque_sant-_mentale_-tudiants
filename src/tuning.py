@@ -11,8 +11,8 @@ CV = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
 
 LOGREG_GRID = {"model__C": [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100]}
 SVC_PARAMS = {
-    "model__estimator__C": [0.1, 0.3, 1, 3, 10, 30],
-    "model__estimator__gamma": [0.001, 0.003, 0.01, 0.03, 0.1, "scale"],
+    "model__estimator__C": [1, 3, 10, 30, 100, 300],
+    "model__estimator__gamma": [0.0001, 0.0003, 0.001, 0.003, 0.01, "scale"],
 }
 
 

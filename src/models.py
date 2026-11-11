@@ -21,7 +21,7 @@ ORDINAL_COLS = {
 
 
 def train_models(X_train, X_test, y_train, y_test):
-    """train 4 models on the same train set. Returns (fitted pipelines, JSON-serializable test metrics)"""
+    """train 3 models on the same train set. Returns (fitted pipelines, JSON-serializable test metrics)"""
     numeric, categorical = get_column_types(X_train)
 
     preprocessor = ColumnTransformer([
