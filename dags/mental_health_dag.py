@@ -4,92 +4,85 @@ import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import pandas as pd
 from airflow.decorators import dag, task
 
-log = logging.getLogger(__name__)
-
-BASE = Path(os.getenv("PROJECT_DIR", "/opt/airflow"))
-RAW_PATH = BASE / "data/raw/student_mental_health.csv"
-SPLIT_PATH = BASE / "data/clean/split.joblib"
-MODEL_PATH = BASE / "models/best_pipeline.joblib"
-REPORTS = BASE / "reports"
+PROJECT_DIR = Path(os.environ.get("PROJECT_DIR", "/opt/airflow"))
+RAW_CSV = PROJECT_DIR / "student_mental_health.csv"
+CLEAN_DIR = PROJECT_DIR / "data" / "clean"
+REPORTS_DIR = PROJECT_DIR / "reports"
+MODEL_PATH = PROJECT_DIR / "models" / "best_pipeline.joblib"
 
 
-def _write_json(obj, path):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(obj, indent=2, default=float))
+def log_failure(context):
+    logging.error("Task %s failed: %s", context["task_instance"].task_id, context.get("exception"))
 
 
-def notify_failure(context):
-    ti = context["task_instance"]
-    log.error(
-        "FAILED dag=%s task=%s run=%s try=%s error=%s",
-        ti.dag_id, ti.task_id, context["run_id"], ti.try_number, context.get("exception"),
-    )
+def save_json(content, name):
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    (REPORTS_DIR / name).write_text(json.dumps(content, indent=2))
+
+
+def load_splits():
+    X_train = pd.read_csv(CLEAN_DIR / "X_train.csv")
+    X_test = pd.read_csv(CLEAN_DIR / "X_test.csv")
+    y_train = pd.read_csv(CLEAN_DIR / "y_train.csv").squeeze("columns")
+    y_test = pd.read_csv(CLEAN_DIR / "y_test.csv").squeeze("columns")
+    return X_train, X_test, y_train, y_test
+
+
+@task
+def audit():
+    """data-quality audit of the raw CSV -> reports/audit.json"""
+    from src.data import load_data, get_column_types
+    from src.eda import audit_data
+
+    df = load_data(RAW_CSV)
+    numeric_cols, _ = get_column_types(df)
+    save_json(audit_data(df, numeric_cols), "audit.json")
+
+
+@task
+def preprocess():
+    """clean the data and split 80/20 -> data/clean/*.csv"""
+    from src.data import load_data
+    from src.preprocessing import prepare_data
+
+    X_train, X_test, y_train, y_test = prepare_data(load_data(RAW_CSV))
+    CLEAN_DIR.mkdir(parents=True, exist_ok=True)
+    for name, part in {"X_train": X_train, "X_test": X_test, "y_train": y_train, "y_test": y_test}.items():
+        part.to_csv(CLEAN_DIR / f"{name}.csv", index=False)
+
+
+@task
+def train():
+    """train the baseline models -> reports/train_metrics.json"""
+    from src.models import train_models
+
+    _, results = train_models(*load_splits())
+    save_json(results, "train_metrics.json")
+
+
+@task
+def tune_evaluate():
+    """tune, pick the best model by CV, evaluate on test -> models/best_pipeline.joblib + reports/final_metrics.json"""
+    from src.tuning import tune_models
+
+    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+    results = tune_models(*load_splits(), str(MODEL_PATH))
+    save_json(results, "final_metrics.json")
 
 
 @dag(
     dag_id="mental_health_risk_pipeline",
-    schedule="0 2 * * 1",
+    schedule="@weekly",
     start_date=datetime(2026, 11, 1),
     catchup=False,
-    max_active_runs=1,
-    dagrun_timeout=timedelta(hours=1),
-    default_args={
-        "owner": "rihab",
-        "retries": 2,
-        "retry_delay": timedelta(minutes=2),
-        "execution_timeout": timedelta(minutes=30),
-        "on_failure_callback": notify_failure,
-    },
-    tags=["ml", "mental-health"],
+    default_args={"retries": 1, "retry_delay": timedelta(minutes=2), "on_failure_callback": log_failure},
+    tags=["mental-health"],
 )
-def mental_health_pipeline():
-
-    @task
-    def audit():
-        from src.data import load_data, get_column_types
-        from src.eda import audit_data
-
-        df = load_data(RAW_PATH)
-        if df.empty:
-            raise ValueError(f"Dataset vide : {RAW_PATH}")
-        numeric, _ = get_column_types(df)
-        report = audit_data(df, numeric)
-        _write_json(report, REPORTS / "audit.json")
-        return {"shape": report["shape"], "imbalance_ratio": report["imbalance_ratio"]}
-
-    @task
-    def preprocess():
-        import joblib
-        from src.data import load_data
-        from src.preprocessing import prepare_data
-
-        split = prepare_data(load_data(RAW_PATH))  
-        SPLIT_PATH.parent.mkdir(parents=True, exist_ok=True)
-        joblib.dump(split, SPLIT_PATH)
-        return {"n_train": len(split[0]), "n_test": len(split[1])}
-
-    @task
-    def train():
-        import joblib
-        from src.models import train_models
-
-        _, results = train_models(*joblib.load(SPLIT_PATH))
-        _write_json(results, REPORTS / "models_metrics.json")
-        return {n: round(float(m["f1"]), 4) for n, m in results.items()}
-
-    @task
-    def tune_evaluate():
-        import joblib
-        from src.tuning import tune_models
-
-        MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
-        final = tune_models(*joblib.load(SPLIT_PATH), model_path=str(MODEL_PATH))
-        _write_json(final, REPORTS / "final_metrics.json")
-        return {"best_model": final["best_model"], "test_f1": float(final["test"]["f1"])}
-
+def mental_health_risk_pipeline():
     audit() >> preprocess() >> train() >> tune_evaluate()
 
 
-mental_health_pipeline()
+mental_health_risk_pipeline()
