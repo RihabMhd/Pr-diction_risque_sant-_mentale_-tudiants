@@ -1,36 +1,31 @@
 import joblib
 from sklearn.metrics import (accuracy_score, confusion_matrix, f1_score,
                              precision_score, recall_score, roc_auc_score)
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, StratifiedKFold
+from sklearn.model_selection import GridSearchCV, StratifiedKFold
 
 from .models import train_models
 from .preprocessing import RANDOM_STATE
 
 SCORING = "f1_macro"
-N_ITER = 30
 CV = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
 
 LOGREG_GRID = {"model__C": [0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100]}
-GB_PARAMS = {
-    "model__n_estimators": [50, 100, 200, 300],
-    "model__learning_rate": [0.01, 0.05, 0.1, 0.2],
-    "model__max_depth": [2, 3, 4],
-    "model__min_samples_leaf": [1, 5, 10, 20],
-    "model__subsample": [0.7, 0.85, 1.0],
+SVC_PARAMS = {
+    "model__estimator__C": [0.1, 0.3, 1, 3, 10, 30],
+    "model__estimator__gamma": [0.001, 0.003, 0.01, 0.03, 0.1, "scale"],
 }
 
 
 def tune_models(X_train, X_test, y_train, y_test, model_path):
-    """tune LogisticRegression (grid) and GradientBoosting (random search) with CV on train,
+    """tune LogisticRegression (grid) and SVC (grid) with CV on train,
     keep the best by CV F1, evaluate it once on test, save the full pipeline to model_path"""
     base, _ = train_models(X_train, X_test, y_train, y_test)
 
     searches = {
         "LogisticRegression": GridSearchCV(
             base["LogisticRegression"], LOGREG_GRID, scoring=SCORING, cv=CV, n_jobs=-1),
-        "GradientBoosting": RandomizedSearchCV(
-            base["GradientBoosting"], GB_PARAMS, n_iter=N_ITER, scoring=SCORING,
-            cv=CV, n_jobs=-1, random_state=RANDOM_STATE),
+        "SVC": GridSearchCV(
+            base["SVC"], SVC_PARAMS, scoring=SCORING, cv=CV, n_jobs=-1),
     }
     for search in searches.values():
         search.fit(X_train, y_train)

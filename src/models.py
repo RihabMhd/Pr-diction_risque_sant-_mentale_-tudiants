@@ -8,7 +8,6 @@ from sklearn.metrics import (accuracy_score, confusion_matrix, f1_score,
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, RobustScaler
 from sklearn.svm import SVC
-from sklearn.tree import DecisionTreeClassifier
 from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline as ImbPipeline
 
@@ -39,7 +38,6 @@ def train_models(X_train, X_test, y_train, y_test):
         "LogisticRegression": LogisticRegression(max_iter=1000, random_state=RANDOM_STATE),
         "RandomForest": RandomForestClassifier(random_state=RANDOM_STATE),
         "SVC": CalibratedClassifierCV(estimator=SVC(random_state=RANDOM_STATE), method="sigmoid", cv=5),
-        "DecisionTree": DecisionTreeClassifier(random_state=RANDOM_STATE),
     }
 
     pipelines, results = {}, {}
