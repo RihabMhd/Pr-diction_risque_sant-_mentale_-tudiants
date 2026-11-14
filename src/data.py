@@ -1,6 +1,9 @@
 import pandas as pd
 
-DATA_PATH = "../data/raw/student_mental_health.csv"   
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+DATA_PATH = ROOT / "data" / "raw" / "student_mental_health.csv"
 TARGET = "Mental_Health_Risk"
 RISK_ORDER = ["Low", "Medium", "High"]
 

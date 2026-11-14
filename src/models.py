@@ -14,11 +14,6 @@ from imblearn.pipeline import Pipeline as ImbPipeline
 from .data import get_column_types
 from .preprocessing import RANDOM_STATE
 
-ORDINAL_COLS = {
-    "Physical_Activity": ["Low", "Moderate", "High"],
-    "Diet_Quality": ["Poor", "Average", "Good"],
-}
-
 
 def train_models(X_train, X_test, y_train, y_test):
     """train 3 models on the same train set. Returns (fitted pipelines, JSON-serializable test metrics)"""
